@@ -13,7 +13,8 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest
+    # Match the Visual Studio 17 2022 CMake generator below.
+    runs-on: windows-2022
 
     steps:
     - name: Checkout code
