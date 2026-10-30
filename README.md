@@ -116,6 +116,11 @@ Open settings with `/wt show`:
 - **Channel Filtering**: Toggle individual channels (Say, Yell, Whisper, Party, Guild, Raid, Battleground, World/Local, Hardcore) for both incoming and outgoing
 - **AFK Pause**: Translation pauses while AFK (off by default, configurable)
 
+Outgoing translations longer than the 255-byte chat limit are sent as multiple
+messages in order. UTF-8 characters and clickable hyperlinks stay intact. If a
+single hyperlink exceeds the limit, the addon reports it and sends the original
+message instead. The translation prefix appears at the start of the first part.
+
 ---
 
 ## ❓ Troubleshooting
@@ -142,6 +147,13 @@ cmake --build . --config Release
 ```
 
 Output: `dll/build/bin/Release/WoWTranslate.dll`
+
+To check outgoing message splitting without the game or DLL, run from the
+repository root with Lua 5.1 or LuaJIT:
+
+```bash
+lua tests/outgoing_chat.lua
+```
 
 </details>
 

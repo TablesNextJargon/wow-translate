@@ -11,4 +11,5 @@ WoWTranslate_Cache.lua
 WoWTranslate_API.lua
 WoWTranslate_Config.lua
 WoWTranslate_Minimap.lua
+WoWTranslate_Chat.lua
 WoWTranslate.lua

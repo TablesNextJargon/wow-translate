@@ -3141,15 +3141,21 @@ local function HookedSendChatMessage(msg, chatType, language, channel)
                 finalMsg = reconstructed
             end
 
-            -- Truncate if over 255 bytes (WoW chat limit)
-            if string.len(finalMsg) > 255 then
-                finalMsg = string.sub(finalMsg, 1, 252) .. "..."
+            -- Chinese text can exceed the byte limit even when the English fits.
+            -- Send every part instead of silently discarding the end.
+            local chunks, splitError = WoWTranslate_SplitChatMessage(finalMsg, FindAllHyperlinks(finalMsg))
+            if not chunks then
+                if originalAddMessage then
+                    originalAddMessage(DEFAULT_CHAT_FRAME, "|cFFFF0000[WoWTranslate] " .. splitError .. "; sending original|r")
+                end
+                originalSendChatMessage(queued.originalMsg, queued.chatType, queued.language, queued.channel)
+                return
             end
-
-            originalSendChatMessage(finalMsg, queued.chatType, queued.language, queued.channel)
-
-            if originalAddMessage then
-                originalAddMessage(DEFAULT_CHAT_FRAME, "|cFF00FF00[WoWTranslate] Sent:|r " .. finalMsg)
+            for i = 1, table.getn(chunks) do
+                originalSendChatMessage(chunks[i], queued.chatType, queued.language, queued.channel)
+                if originalAddMessage then
+                    originalAddMessage(DEFAULT_CHAT_FRAME, "|cFF00FF00[WoWTranslate] Sent:|r " .. chunks[i])
+                end
             end
         else
             -- Translation failed - send original
