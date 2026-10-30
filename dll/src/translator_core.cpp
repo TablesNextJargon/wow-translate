@@ -349,11 +349,11 @@ string TranslationClient::ParseGoogleFreeResponse(const string& json) {
     if (pos == string::npos) return "";
     pos += 3; // now at opening " of first translated segment
 
-    // Upper bound: the ]] that closes the outer sentence array
-    size_t sentencesEnd = json.find("]]", pos);
+    // Each sentence may contain nested metadata arrays. Match the sentence's
+    // closing bracket structurally; a raw "]]" can occur before the next sentence.
 
     while (pos < json.size()) {
-        if (json[pos] != '"') break;
+        if (json[pos] != '"') return "";
         pos++; // skip opening "
 
         string segment;
@@ -384,17 +384,46 @@ string TranslationClient::ParseGoogleFreeResponse(const string& json) {
             }
             pos++;
         }
+        if (pos >= json.size()) return ""; // incomplete translated string
         result += segment;
-        if (pos < json.size()) pos++; // skip closing "
+        pos++; // skip closing quote
 
-        // Find next inner array: ,["  within the sentence array bounds
-        size_t nextInner = json.find(",[\"", pos);
-        if (nextInner == string::npos ||
-            (sentencesEnd != string::npos && nextInner > sentencesEnd)) break;
-        pos = nextInner + 2; // point at the opening " of next segment
+        int depth = 1; // current sentence array
+        bool inString = false;
+        while (pos < json.size() && depth > 0) {
+            char ch = json[pos++];
+            if (inString) {
+                if (ch == '\\') {
+                    if (pos >= json.size()) return "";
+                    pos++; // escaped quotes/brackets are string content
+                } else if (ch == '"') {
+                    inString = false;
+                }
+            } else if (ch == '"') {
+                inString = true;
+            } else if (ch == '[') {
+                depth++;
+            } else if (ch == ']') {
+                depth--;
+            }
+        }
+        if (depth != 0) return "";
+        auto skipWhitespace = [&]() {
+            while (pos < json.size() &&
+                   (json[pos] == ' ' || json[pos] == '\t' ||
+                    json[pos] == '\r' || json[pos] == '\n')) pos++;
+        };
+        skipWhitespace();
+        if (pos >= json.size()) return "";
+        if (json[pos] == ']') return result; // entire sentence list consumed
+        if (json[pos++] != ',') return "";
+        skipWhitespace();
+        if (pos >= json.size() || json[pos++] != '[') return "";
+        skipWhitespace();
     }
 
-    return result;
+    return ""; // never cache a partially parsed response
+
 }
 
 TranslationResult TranslationClient::TranslateText(const string& text, string& result,
